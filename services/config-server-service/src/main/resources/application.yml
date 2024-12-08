@@ -7,7 +7,7 @@ spring:
     config:
       server:
         git:
-          url: https://github.com/papealphou1986/config-server-service_configs
+          url: https://github.com/papealphou1986/gmp_configs
 
 server:
   port=8071
