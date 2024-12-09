@@ -1,0 +1,13 @@
+spring:
+  cloud:
+   discovery:
+    enabled: true
+  config:
+   enabled: true
+   import: optional:configserver:${CONFIG_SERVICE_URL:http://192.168.154.250:8888}
+  instance:
+   prefer-ip-address: true
+  client:
+   lease-renewal-interval-in-seconds: 30
+   lease-expiration-duration-in-seconds: 90
+   registry-fetch-interval: 5

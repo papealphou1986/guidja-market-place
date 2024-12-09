@@ -1,0 +1,22 @@
+spring:
+  application:
+   name: gateway-service
+  config:
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://192.168:154.250:8011}
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:4200"
+              - "http://192.168.154.250/"
+            allowed-headers:
+              - "*"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+server:
+  port: 8010

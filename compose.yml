@@ -1,22 +1,109 @@
 services:
-  postgres:
-    container_name: ecom_pg_sgbd
-    image: postgres:latest
-    environment:
-      POSTGRES_USER: alphou
-      POSTGRES_PASSWORD: alphou
-      POSTGRES_DB: ecom_db
-      PGDATA: /var/lib/postgresql/data
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+  gmp-discovery-service:
+    build: ./services/discovery-service
+    container_name: gmp-discovery-service
     ports:
-      - 5432:5432
+      - "8761:8761"
     networks:
       - microservices-net
-    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${DISCOVERY_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
+  gmp-config-server-service:
+    build: ./services/config-server-service
+    container_name: gmp-config-server-service
+    ports:
+      - "8888:8888"
+    environment:
+      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
+    depends_on:
+      gmp-discovery-service:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${CONFIG_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: products_service_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - database
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
+  gmp-products-service:
+    build: ./services/products-service
+    container_name: gmp-products-service
+    ports:
+      - "8014:8014"
+    environment:
+      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
+      - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
+      - DATABASE_HOST=mysql-db
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=${MYSQL_DATABASE}
+      - DATABASE_USER=${MYSQL_USER}
+      - DATABASE_PASSWORD=${MYSQL_PASSWORD}
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      gmp-config-server-service:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${PRODUCTS_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
+
+  postgres-db:
+    image: postgres:15
+    container_name: orders_service_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
 
   pgadmin:
-    container_name: ecom_pgadmin
+    container_name: gmp_pgadmin
     image: dpage/pgadmin4:latest
     environment:
       PGADMIN_DEFAULT_EMAIL: pgadmin@pgadmin.org
@@ -27,8 +114,36 @@ services:
     ports:
       - 8034:80
     networks:
-      - microservices-net
+      - database
     restart: unless-stopped
+
+  gmp-orders-service:
+    build: ./services/orders-service
+    container_name: gmp-orders-service
+    ports:
+      - "8015:8015"
+    environment:
+      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
+      - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
+      - DATABASE_HOST=postgres-db
+      - DATABASE_PORT=5434
+      - DATABASE_NAME=${POSTGRES_DB}
+      - DATABASE_USER=${POSTGRES_USER}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      gmp-config-server-service:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${ORDERS_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
 
   mongo-server:
     image: mongo:7.0.5
@@ -36,10 +151,14 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}  # Optional, only if needed
     volumes:
-      - /data:/data/db
+      - mongo-data:/data/db
+    networks:
+      - database
+    restart: unless-stopped
 
   mongo-express:
     image: mongo-express:1.0.0-alpha.4
@@ -52,6 +171,35 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongo-server
     depends_on:
       - mongo-server
+    networks:
+      - database
+
+  gmp-users-service:
+    build: ./services/users-service
+    container_name: gmp-users-service
+    ports:
+      - "8016:8016"
+    environment:
+      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
+      - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
+      - DATABASE_HOST=mongo-db
+      - DATABASE_PORT=27017
+      - DATABASE_NAME=${MONGO_DB_NAME}
+      - DATABASE_USER=${MONGO_INITDB_ROOT_USERNAME}
+      - DATABASE_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    depends_on:
+      mongo-server:
+        condition: service_healthy
+      gmp-config-server-service:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${USERS_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
 
   mail-dev:
     container_name: ecom_mail_dev
@@ -63,11 +211,34 @@ services:
       - microservices-net
     restart: unless-stopped
 
-networks:
-  microservices-net:
-    driver: bridge
+  gmp-gateway-service:
+    build: ./gateway-service
+    container_name: gmp-gateway-service
+    ports:
+      - "8010:8010"
+    environment:
+      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
+      - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
+    depends_on:
+      gmp-configs-service:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${GATEWAY_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
 
 volumes:
   postgres-data:
   pgadmin-data:
   mongo-data:
+  mysql_data:
+
+networks:
+  microservices-net:
+    driver: bridge
+  database:
+    driver: bridge

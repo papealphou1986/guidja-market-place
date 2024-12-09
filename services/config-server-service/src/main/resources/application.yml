@@ -7,24 +7,8 @@ spring:
     config:
       server:
         git:
-          url: https://github.com/papealphou1986/gmp_configs
-
+          url: https://github.com/papealphou1986/gmp_configs   # Configuration Git repository URI for the Config Server
+    discovery:
+      enabled: true
 server:
-  port=8071
-
-  # Configuration Git repository URI for the Config Server
-spring.cloud.config.server.git.uri=https://github.com/papealphou1986/banking-system-configs
-  
-  # Eureka settings
-  # Threshold for peer accessibility (relevant for multi-peer Eureka setups)
-eureka.server.peer-availability-threshold=1
-  # Interval to check for expired instances
-eureka.server.eviction-interval-timer-in-ms=60000
-  # Disable self-preservation to force quicker expiration of unresponsive instances
-eureka.client.enable-self-preservation=false
-
-spring.cloud.discovery.enabled=true
-eureka.instance.prefer-ip-address=true
-eureka.client.service-url.defaultZone=${DISCOVERY_SERVICE_URL:http://198.168.154.250:8761/eureka/}
-management.endpoints.web.exposure.include=health,info,refresh,metrics,env,trace,cache
-
+  port: 8888

@@ -1,0 +1,12 @@
+server:
+  port: 8016
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://root:root@192.168.154.250:27017/users_db  # MongoDB connection URI
+      database: users_db                                      # MongoDB database name
+
+logging:
+  level:
+    org.springframework.data.mongodb: DEBUG  # Optional: Enables debug logging for MongoDB

@@ -1,14 +1,13 @@
-package com.atongbatechs.gmp.configserverservice;
+package com.atongbatechs.gmp.usersservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-@EnableConfigServer
-public class ConfigServerServiceApplication {
+public class UsersServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ConfigServerServiceApplication.class, args);
+		SpringApplication.run(UsersServiceApplication.class, args);
 	}
 
 }
