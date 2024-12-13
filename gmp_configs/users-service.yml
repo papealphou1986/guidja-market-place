@@ -4,9 +4,13 @@ server:
 spring:
   data:
     mongodb:
-      uri: mongodb://root:root@192.168.154.250:27017/users_db  # MongoDB connection URI
-      database: users_db                                      # MongoDB database name
+      uri: mongodb://${USER_MONGO_DB_USERNAME}:${USER_MONGO_DB_PASSWORD}@${MONGO_SERVER_HOST}:${MONGO_SERVER_PORT}/${USER_MONGO_DB_NAME} # MongoDB connection URI
 
 logging:
   level:
-    org.springframework.data.mongodb: DEBUG  # Optional: Enables debug logging for MongoDB
+    org.springframework.data.mongodb: DEBUG # Enables debug logging for MongoDB
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true

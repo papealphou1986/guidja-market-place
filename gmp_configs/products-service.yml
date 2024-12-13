@@ -4,9 +4,9 @@ server:
 # MySQL Database Configuration
 spring:
   datasource:
-    url: jdbc:mysql://192.168.154.250:3307/productss_db
-    username: alphou
-    password: alphou
+    url: jdbc:mysql://${PRODUCTS_DB_HOST}:${PRODUCTS_PORT}/${PRODUCTS_DB}
+    username: ${PRODUCTS_DB_USERNAME}
+    password: ${PRODUCTS_DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     # Hibernate (JPA) Configuration
     jpa:
@@ -16,3 +16,8 @@ spring:
       properties:
         hibernate:
           dialect: org.hibernate.dialect.MySQL8Dialect
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true

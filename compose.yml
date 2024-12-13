@@ -17,7 +17,7 @@ services:
     build: ./services/config-server-service
     container_name: gmp-config-server-service
     ports:
-      - "8888:8888"
+      - 8888
     environment:
       - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
     depends_on:
@@ -32,16 +32,18 @@ services:
       retries: 5
       start_period: 90s
 
-  mysql-db:
+  mysql-server:
     image: mysql:8.0
-    container_name: products_service_db
+    container_name: gmp_products_service_db
     environment:
+      MYSQL_DB_HOST: ${MYSQL_DB_HOST}
+      MYSQL_DB_PORT: ${MYSQL_DB_PORT}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}ç
     ports:
-      - "3307:3306"
+      - ${MYSQL_DB_PORT}:3306
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -52,7 +54,6 @@ services:
       timeout: 20s
       retries: 5
       start_period: 90s
-
   gmp-products-service:
     build: ./services/products-service
     container_name: gmp-products-service
@@ -61,13 +62,13 @@ services:
     environment:
       - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
       - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
-      - DATABASE_HOST=mysql-db
-      - DATABASE_PORT=3306
-      - DATABASE_NAME=${MYSQL_DATABASE}
-      - DATABASE_USER=${MYSQL_USER}
-      - DATABASE_PASSWORD=${MYSQL_PASSWORD}
+      - PRODUCTS_DB_HOST=mysql-server
+      - PRODUCTS_PORT=${MYSQL_DB_PORT}
+      - PRODUCTS_DB=${MYSQL_DATABASE}
+      - PRODUCTS_DB_USERNAME=${MYSQL_USER}
+      - PRODUCTS_DB_PASSWORD=${MYSQL_PASSWORD}
     depends_on:
-      mysql-db:
+      mysql-server:
         condition: service_healthy
       gmp-config-server-service:
         condition: service_healthy
@@ -80,57 +81,56 @@ services:
       retries: 5
       start_period: 90s
 
-
-  postgres-db:
+  gmp-postgres-server:
     image: postgres:15
-    container_name: orders_service_db
+    container_name: gmp_postgres-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_SERVER_HOST: ${POSTGRES_SERVER_HOST}
+      POSTGRES_SERVER_PORT: ${POSTGRES_SERVER_PORT}
+      POSTGRES_USER: pispa
+      POSTGRES_PASSWORD: pispa
+      PGDATA: /var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - ${POSTGRES_SERVER_PORT}:5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - database
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}" ]
+      test: [ "CMD", "pg_isready", "-U", "${ORDER_DB_USERNAME}" ]
       interval: 10s
       timeout: 20s
       retries: 5
       start_period: 90s
-
-  pgadmin:
+  gmp-pgadmin:
     container_name: gmp_pgadmin
     image: dpage/pgadmin4:latest
     environment:
-      PGADMIN_DEFAULT_EMAIL: pgadmin@pgadmin.org
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - pgadmin:/var/lib/pgadmin
     ports:
-      - 8034:80
+      - 8024:80
     networks:
       - database
     restart: unless-stopped
-
   gmp-orders-service:
-    build: ./services/orders-service
+    build: ./services/order-service
     container_name: gmp-orders-service
     ports:
       - "8015:8015"
     environment:
       - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
       - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
-      - DATABASE_HOST=postgres-db
-      - DATABASE_PORT=5434
-      - DATABASE_NAME=${POSTGRES_DB}
-      - DATABASE_USER=${POSTGRES_USER}
-      - DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - ORDER_POSTGRES_SERVER_HOST=gmp-postgres-server
+      - ORDER_POSTGRES_SERVER_PORT=${POSTGRES_SERVER_PORT}
+      - ORDER_DB_NAME=${ORDER_DB_NAME}
+      - ORDER_DB_USERNAME=${ORDER_DB_USERNAME}
+      - ORDER_DB_PASSWORD=${ORDER_DB_PASSWORD}
     depends_on:
-      postgres-db:
+      gmp-postgres-server:
         condition: service_healthy
       gmp-config-server-service:
         condition: service_healthy
@@ -143,35 +143,30 @@ services:
       retries: 5
       start_period: 90s
 
-  mongo-server:
+  gmp-mongo-server:
     image: mongo:7.0.5
-    container_name: mongo-server
+    container_name: gmp-mongo-server_db
     ports:
-      - "27017:27017"
+      - ${USER_MONGO_SERVER_PORT}:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      MONGO_DB_NAME: ${MONGO_DB_NAME}  # Optional, only if needed
     volumes:
       - mongo-data:/data/db
     networks:
       - database
     restart: unless-stopped
-
   mongo-express:
     image: mongo-express:1.0.0-alpha.4
-    container_name: mongo-express
+    container_name: gmp-mongo-express
     ports:
-      - "8090:8081"
+      - "8027:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: root
-      ME_CONFIG_MONGODB_SERVER: mongo-server
-    depends_on:
-      - mongo-server
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: gmp-mongo-server
     networks:
       - database
-
   gmp-users-service:
     build: ./services/users-service
     container_name: gmp-users-service
@@ -180,13 +175,13 @@ services:
     environment:
       - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
       - CONFIG_SERVICE_URL=${ENV_CONFIG_SERVICE_URL}
-      - DATABASE_HOST=mongo-db
-      - DATABASE_PORT=27017
-      - DATABASE_NAME=${MONGO_DB_NAME}
-      - DATABASE_USER=${MONGO_INITDB_ROOT_USERNAME}
-      - DATABASE_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_SERVER_HOST=gmp-mongo-server
+      - MONGO_SERVER_PORT=${USER_MONGO_SERVER_PORT}
+      - USER_MONGO_DB_USERNAME=${USER_MONGO_DB_USERNAME}
+      - USER_MONGO_DB_PASSWORD=${USER_MONGO_DB_PASSWORD}
+      - USER_MONGO_DB_NAME=${USER_MONGO_DB_NAME}
     depends_on:
-      mongo-server:
+      gmp-mongo-server:
         condition: service_healthy
       gmp-config-server-service:
         condition: service_healthy
@@ -200,7 +195,7 @@ services:
       start_period: 90s
 
   mail-dev:
-    container_name: ecom_mail_dev
+    container_name: gmp_mail_dev
     image: maildev/maildev:latest
     ports:
       - 1080:1080
@@ -210,7 +205,7 @@ services:
     restart: unless-stopped
 
   gmp-gateway-service:
-    build: ./gateway-service
+    build: ./services/gateway-service
     container_name: gmp-gateway-service
     ports:
       - "8010:8010"
@@ -231,7 +226,7 @@ services:
 
 volumes:
   postgres-data:
-  pgadmin-data:
+  pgadmin:
   mongo-data:
   mysql_data:
 

@@ -1,19 +1,27 @@
 server:
   port: 8015
 
-# PostgreSQL Database Configuration
 spring:
   datasource:
-   url: jdbc:postgresql://192.168.154.250:5434/orders_db
-   username: alphou
-   password: alphou
-   driver-class-name: org.postgresql.Driver
-  
-  # Hibernate (JPA) Configuration
+    url: jdbc:postgresql://${ORDER_POSTGRES_SERVER_HOST}:${ORDER_POSTGRES_SERVER_PORT}/${ORDER_DB_NAME}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 1800000
+
   jpa:
     hibernate:
-     ddl-auto: update
+      ddl-auto: update
     show-sql: true
     properties:
-     hibernate:
-      dialect: org.hibernate.dialect.PostgreSQLDialect
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
