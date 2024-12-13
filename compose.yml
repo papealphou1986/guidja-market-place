@@ -3,6 +3,8 @@ services:
   gmp-config-server-service:
     build: ./services/config-server-service
     container_name: gmp-config-server-service
+    environment:
+      - CONFIG_SERVICE_URL:${ENV_CONFIG_SERVICE_URL}
     ports:
       - 8888
     networks:
