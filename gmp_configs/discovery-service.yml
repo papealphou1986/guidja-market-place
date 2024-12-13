@@ -12,6 +12,9 @@ eureka:
   client:
     register-with-eureka: false
     fetch-registry: false
+    transport:
+      jersey:
+        enabled: false
 
 server:
   port: 8761
