@@ -4,7 +4,8 @@ spring:
       enabled: false
   config:
     enabled: true
-    import: optional:configserver:${CONFIG_SERVICE_URL:http://192.168.154.250:8888}
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://DESKTOP--ALPHOU:8888}
+    #import: optional:configserver:http://DESKTOP--ALPHOU:8011
   instance:
     prefer-ip-address: true
 
