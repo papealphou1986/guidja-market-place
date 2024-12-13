@@ -1,4 +1,19 @@
 services:
+
+  gmp-config-server-service:
+    build: ./services/config-server-service
+    container_name: gmp-config-server-service
+    ports:
+      - 8888
+    networks:
+      - microservices-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "${CONFIG_SERVICE_HEALTH_URL}" ]
+      interval: 10s
+      timeout: 20s
+      retries: 5
+      start_period: 90s
+
   gmp-discovery-service:
     build: ./services/discovery-service
     container_name: gmp-discovery-service
@@ -6,27 +21,11 @@ services:
       - "8761:8761"
     networks:
       - microservices-net
+    depends_on:
+      gmp-config-server-service:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "${DISCOVERY_SERVICE_HEALTH_URL}" ]
-      interval: 10s
-      timeout: 20s
-      retries: 5
-      start_period: 90s
-
-  gmp-config-server-service:
-    build: ./services/config-server-service
-    container_name: gmp-config-server-service
-    ports:
-      - 8888
-    environment:
-      - DISCOVERY_SERVICE_URL=${ENV_DISCOVERY_SERVICE_URL}
-    depends_on:
-      gmp-discovery-service:
-        condition: service_healthy
-    networks:
-      - microservices-net
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "${CONFIG_SERVICE_HEALTH_URL}" ]
       interval: 10s
       timeout: 20s
       retries: 5
