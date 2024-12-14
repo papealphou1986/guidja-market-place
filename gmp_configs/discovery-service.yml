@@ -4,9 +4,6 @@ spring:
       enabled: false
   instance:
     prefer-ip-address: true
-  config:
-    enabled: true
-    import: optional:configserver:${CONFIG_SERVICE_URL}
 
 eureka:
   client:
