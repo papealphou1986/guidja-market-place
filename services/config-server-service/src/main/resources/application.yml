@@ -7,7 +7,7 @@ spring:
     config:
       server:
         git:
-          url: https://github.com/papealphou1986/gmp_configs   # Configuration Git repository URI for the Config Server
+          uri: https://github.com/papealphou1986/gmp_configs
     discovery:
       enabled: true
 server:

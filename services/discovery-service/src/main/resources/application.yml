@@ -1,3 +1,6 @@
 spring:
   application:
     name: discovery-service
+  config:
+    enabled: true
+    import: optional:configserver:${CONFIG_SERVICE_URL}
